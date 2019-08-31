@@ -54,6 +54,33 @@ object Mima013Plugin extends AutoPlugin {
         TaskKey[Unit]("publishSigned") := {},
         TaskKey[Unit]("publishLocalSigned") := {},
         fork in run := true,
+        Seq(Compile, Runtime, Test).map(
+          scope =>
+            fullClasspath in scope := {
+              // workaround for sbt-coursier bug
+              // https://github.com/coursier/coursier/issues/543
+              // https://github.com/coursier/sbt-coursier/commit/594eb47bc59a324390f8f8293d7ae895e9939318
+              val overrideLibs = List(
+                "scala-library",
+                "scala-compiler",
+                "scala-reflect"
+              )
+
+              List(
+                overrideLibs.map { artifactId =>
+                  Attributed(
+                    getArtifact(
+                      scalaOrganization.value % artifactId % "2.12.8",
+                      ivySbt.value,
+                      streams.value
+                    )
+                  )(AttributeMap.empty)
+                },
+                (fullClasspath in scope).value
+                  .filterNot(x => overrideLibs.exists(x.data.getName startsWith _))
+              ).flatten
+            }
+        ),
         // for sbt-mima-plugin
         resolvers += Resolver.sbtPluginRepo("releases"),
         // suppress scala binary version warnings
@@ -155,6 +182,9 @@ object Mima013Plugin extends AutoPlugin {
       }.value
     }
   )
+
+  private[this] def getArtifact(m: ModuleID, ivy: IvySbt, s: TaskStreams): File =
+    getPreviousArtifact(m, ivy, s)
 
   // Derived from
   // https://github.com/lightbend/mima/blob/0.6.0/sbtplugin/src/main/scala/com/typesafe/tools/mima/plugin/SbtMima.scala#L85-L104
