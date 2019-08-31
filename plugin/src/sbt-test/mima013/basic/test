@@ -1,0 +1,19 @@
+> projects
+> + compile
+
+> v1/mimaReportBinaryIssues
+> set mimaFailOnNoPrevious in v1 := true
+-> v1/mimaReportBinaryIssues
+
+> + v1/publishLocal
+
+> reload
+
+-> + v2/mimaReportBinaryIssues
+> set mimaFailOnProblem in v2 := false
+> + v2/mimaReportBinaryIssues
+> set mimaFailOnProblem in v2 := true
+-> + v2/mimaReportBinaryIssues
+
+$ copy 0.1.0-SNAPSHOT.backwards.excludes v2/src/main/mima-filters/0.1.0-SNAPSHOT.backwards.excludes
+> + v2/mimaReportBinaryIssues
